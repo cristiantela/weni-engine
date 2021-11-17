@@ -186,7 +186,7 @@ class OrganizationViewSet(
     @action(
         detail=True,
         methods=["GET"],
-        url_name="get-active-contacts",
+        url_name="get-org-active-contacts",
         authentication_classes=[ExternalAuthentication],
         url_path="active-contacts/(?P<organization_uuid>[^/.]+)",
         permission_classes=[AllowAny],
