@@ -1,6 +1,5 @@
-from datetime import datetime
-
 from django.conf import settings
+from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from django.http import JsonResponse
 from django_filters.rest_framework import DjangoFilterBackend
@@ -12,7 +11,6 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
-
 from connect import utils
 from connect.api.v1.metadata import Metadata
 from connect.api.v1.mixins import MultipleFieldLookupMixin
@@ -202,6 +200,88 @@ class OrganizationViewSet(
             contact_count += project.contact_count
         result["active-contacts"] = {
             "organization_active_contacts": contact_count,
+        }
+        return JsonResponse(data=result)
+
+    @action(
+        detail=True,
+        methods=["GET"],
+        url_name='get-stripe-card-data',
+        url_path='get-stripe-card-data/(?P<organization_uuid>[^/.]+)',
+        authentication_classes=[ExternalAuthentication],
+        permission_classes=[AllowAny],
+    )
+    def get_stripe_card_data(self, request, organization_uuid):
+        if not organization_uuid:
+            raise ValidationError(
+                _("Need to pass 'organization_uuid'")
+            )
+        organization = get_object_or_404(Organization, uuid=organization_uuid)
+        self.check_object_permissions(self.request, organization)
+        costomer = organization.organization_billing.get_stripe_customer
+        return JsonResponse(data=StripeGateway().get_card_data(costomer.id))
+
+    @action(
+        detail=True,
+        methods=["POST"],
+        url_name="billing-closing-plan",
+        url_path="billing/closing-plan/(?P<organization_uuid>[^/.]+)",
+        authentication_classes=[ExternalAuthentication],
+        permission_classes=[AllowAny],
+    )
+    def closing_plan(self, request, organization_uuid):  # pragma: no cover
+        result = {}
+        organization = get_object_or_404(Organization, uuid=organization_uuid)
+
+        org_billing = organization.organization_billing
+        org_billing.termination_date = timezone.now().date()
+        org_billing.is_active = False
+        org_billing.save()
+        # suspends the organization's projects
+        for project in organization.project.all():
+            celery_app.send_task(
+                "update_suspend_project",
+                args=[
+                    str(project.flow_organization),
+                    True
+                ],
+            )
+        result = {
+            "plan": org_billing.plan,
+            "is_active": org_billing.is_active,
+            "termination_date": org_billing.termination_date,
+        }
+        return JsonResponse(data=result)
+
+    @action(
+        detail=True,
+        methods=["POST"],
+        url_name="billing-reactivate-plan",
+        url_path="billing/reactivate-plan/(?P<organization_uuid>[^/.]+)",
+        authentication_classes=[ExternalAuthentication],
+        permission_classes=[AllowAny],
+    )
+    def reactivate_plan(self, request, organization_uuid):  # pragma: no cover
+        result = {}
+
+        organization = get_object_or_404(Organization, uuid=organization_uuid)
+        org_billing = organization.organization_billing
+        org_billing.termination_date = None
+        org_billing.is_active = True
+        org_billing.save()
+
+        for project in organization.project.all():
+            celery_app.send_task(
+                "update_suspend_project",
+                args=[
+                    str(project.flow_organization),
+                    False
+                ],
+            )
+        result = {
+            "plan": org_billing.plan,
+            "is_active": org_billing.is_active,
+            "termination_date": org_billing.termination_date,
         }
         return JsonResponse(data=result)
 
