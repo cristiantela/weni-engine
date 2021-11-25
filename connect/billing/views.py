@@ -103,6 +103,7 @@ class StripeHandler(View):  # pragma: no cover
             )
             org.cardholder_name = billing_details.get("name")
             org.card_brand = card_info.get("brand")
+            org.payment_method = org.PAYMENT_METHOD_CREDIT_CARD
             org.save(
                 update_fields=[
                     "stripe_configured_card",
@@ -110,6 +111,7 @@ class StripeHandler(View):  # pragma: no cover
                     "card_expiration_date",
                     "cardholder_name",
                     "card_brand",
+                    "payment_method",
                 ]
             )
             org.allow_payments()
@@ -140,16 +142,4 @@ class StripeHandler(View):  # pragma: no cover
                     "card_brand",
                 ]
             )
-
-        elif event.type == "setup_intent.created":
-            setup_intent = event['data']['object']
-            print('[+]OK[+]')
-            org = Organization.objects.first()
-            org.name = 'Webhook deu certo 8'
-            org.save(
-                update_fields=[
-                    "name",
-                ]
-            )
-        # empty response, 200 lets Stripe know we handled it
         return HttpResponse("Ignored, uninteresting event")
