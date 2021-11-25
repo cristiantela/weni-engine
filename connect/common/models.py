@@ -1,5 +1,6 @@
 import decimal
 import logging
+import stripe
 import uuid as uuid4
 from datetime import timedelta
 from decimal import Decimal
@@ -546,7 +547,7 @@ class BillingPlan(models.Model):
     card_brand = models.CharField(
         verbose_name=_("Card Brand"), null=True, blank=True, max_length=24
     )
-
+    
     @property
     def get_stripe_customer(self):
         import stripe
@@ -626,7 +627,28 @@ class BillingPlan(models.Model):
             ).quantize(Decimal(".01"), decimal.ROUND_HALF_UP),
         }
 
+    def set_stripe_customer(self, customer):
+        self.stripe_customer = customer
+        self.save()
+    # def set_stripe_customer(self, customer):
+    #     stripe.api_key = settings.BILLING_SETTINGS.get("stripe", {}).get("API_KEY")
+    #     self.stripe_customer = customer
+    #     try:
+    #         stripe_data = stripe.PaymentMethod.list(customer=customer, type='card')
+    #         if stripe_data.data[0].card:
+    #             self.stripe_configured_card = True
+    #             self.payment_method = self.PAYMENT_METHOD_CREDIT_CARD
+    #             self.final_card_number = stripe_data.data[0].card.last4
+    #             self.card_expiration_date = f'{stripe_data.data[0].card.exp_month}/{stripe_data.data[0].card.exp_year}'
+    #             self.cardholder_name = stripe_data.data[0].billing_details.name
+    #             self.card_brand = stripe_data.data[0].card.brand
+    #             self.save()
 
+    #     except stripe.error.CardError as error:
+    #         return error
+    #     except stripe.error.InvalidRequestError as error:
+    #         return error
+            
 class Invoice(models.Model):
     class Meta:
         verbose_name = _("organization billing invoice")

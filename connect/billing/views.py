@@ -2,7 +2,7 @@ import json
 from datetime import datetime
 
 from django.conf import settings
-from django.http import HttpResponse
+from django.http import HttpResponse, response
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
@@ -25,12 +25,10 @@ class StripeHandler(View):  # pragma: no cover
 
     def post(self, request, *args, **kwargs):
         import stripe
-
         # from temba.orgs.models import Org, TopUp
 
         # stripe delivers a JSON payload
         stripe_data = json.loads(request.body)
-
         # but we can't trust just any response, so lets go look up this event
         stripe.api_key = settings.BILLING_SETTINGS.get("stripe", {}).get("API_KEY")
         event = stripe.Event.retrieve(stripe_data["id"])
@@ -38,8 +36,8 @@ class StripeHandler(View):  # pragma: no cover
         if not event:
             return HttpResponse("Ignored, no event")
 
-        if not event.livemode and settings.BILLING_TEST_MODE:
-            return HttpResponse("Ignored, test event")
+        # if not event.livemode and settings.BILLING_TEST_MODE:
+        #     return HttpResponse("Ignored, test event")
 
         # we only care about invoices being paid or failing
         if event.type == "charge.succeeded" or event.type == "charge.failed":
@@ -115,6 +113,43 @@ class StripeHandler(View):  # pragma: no cover
                 ]
             )
             org.allow_payments()
+        elif event.type == "issuing_card.created":
+            customer = stripe_data.get("data", {}).get("object", {}).get("customer")
+            card_info = stripe_data.get("data", {}).get("object", {}).get("card", {})
+            billing_details = (
+                stripe_data.get("data", {}).get("object", {}).get("billing_details", {})
+            )
+            
+            org = BillingPlan.objects.filter(stripe_customer=customer).first()
+            if not org:
+                return HttpResponse("Ignored, no org for customer")
+            
+            org.stripe_configured_card = True
+            org.final_card_number = card_info.get("last4")
+            org.card_expiration_date = (
+                f"{card_info.get('exp_month')}/{card_info.get('exp_year')}"
+            )
+            org.cardholder_name = billing_details.get("name")
+            org.card_brand = card_info.get("brand")
+            org.save(
+                update_fields=[
+                    "stripe_configured_card",
+                    "final_card_number",
+                    "card_expiration_date",
+                    "cardholder_name",
+                    "card_brand",
+                ]
+            )
 
+        elif event.type == "setup_intent.created":
+            setup_intent = event['data']['object']
+            print('[+]OK[+]')
+            org = Organization.objects.first()
+            org.name = 'Webhook deu certo 8'
+            org.save(
+                update_fields=[
+                    "name",
+                ]
+            )
         # empty response, 200 lets Stripe know we handled it
         return HttpResponse("Ignored, uninteresting event")

@@ -1,3 +1,4 @@
+import stripe
 from django.conf import settings
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
@@ -81,7 +82,6 @@ class OrganizationViewSet(
         url_path="invoice/setup_intent/(?P<organization_uuid>[^/.]+)",
     )
     def setup_intent(self, request, organization_uuid, **kwargs):  # pragma: no cover
-        import stripe
 
         organization = get_object_or_404(Organization, uuid=organization_uuid)
 
@@ -91,6 +91,10 @@ class OrganizationViewSet(
         setup_intent = stripe.SetupIntent.create(
             customer=organization.organization_billing.get_stripe_customer.id
         )
+
+        if setup_intent:
+            customer = setup_intent['customer']
+            organization.organization_billing.set_stripe_customer(customer)
 
         return JsonResponse(data=setup_intent)
 

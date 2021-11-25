@@ -41,7 +41,8 @@ urlpatterns = [
     path("", schema_view.with_ui("redoc")),
     path("admin/", admin.site.urls),
     path("v1/", include(rookly_api_v1_urls)),
-    url(r"^handlers/stripe/$", StripeHandler.as_view(), name="handlers.stripe_handler"),
+    path('handlers/stripe/', StripeHandler.as_view(), name="handlers.stripe_handler"),
+    # url(r"^handlers/stripe/$", StripeHandler.as_view(), name="handlers.stripe_handler"),
 ]
 
 urlpatterns += staticfiles_urlpatterns()
