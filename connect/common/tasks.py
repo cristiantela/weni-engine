@@ -464,3 +464,17 @@ def get_billing_total_statistics(project_uuid: str, before: str, after: str):
     )
 
     return contact_count
+
+
+@app.task(name="list_channels")
+def list_channels(org_uuid: str, channel_type):
+    flows = utils.get_grpc_types().get("flow")
+    channels = []
+    for channel in flows.list_channel(org_uuid, channel_type):
+        channels.append(dict(
+            uuid=channel.uuid,
+            name=channel.name,
+            address=channel.address
+            )
+        )
+    return channels
