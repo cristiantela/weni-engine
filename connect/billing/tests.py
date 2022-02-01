@@ -47,3 +47,25 @@ class StripeGatewayTestCase(TestCase):
     def test_get_payment_method_details_fail(self):
         resp = self.merchant.get_payment_method_details("ch_3K9wZYGB60zUb40p1C0iisk")
         self.assertEquals(resp['status'], 'FAIL')
+
+
+class OdooGatewayTestCase(TestCase):
+    def setUp(self):
+        self.odoo = get_gateway("odoo")
+
+    def test_connection_information(self):
+        common = self.odoo.common
+        self.assertEquals(type(common.version()), dict)
+        self.assertEquals(common.version()['server_version'], '12.0')
+
+    def test_odoo_authentication(self):
+        uid = self.odoo.authenticate()
+        self.assertEquals(type(uid), int)
+
+    def test_list_invoices(self):
+        invoices = self.odoo.list_invoices()
+        self.assertEquals(invoices["status"], "SUCCESS")
+
+    def test_get_invoice(self):
+        invoice = self.odoo.get_invoice([63])
+        self.assertEquals(invoice["status"], "SUCCESS")
