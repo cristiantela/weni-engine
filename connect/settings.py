@@ -70,6 +70,10 @@ env = environ.Env(
     BILLING_TEST_MODE=(bool, False),
     BILLING_SETTINGS=(dict, {}),
     TOKEN_EXTERNAL_AUTHENTICATION=(str, None),
+    ODOO_DB=(str, None),
+    ODOO_USERNAME=(str, None),
+    ODOO_PASSWORD=(str, None),
+    ODOO_BASE_URL=(str, None),
 )
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -437,3 +441,9 @@ BILLING_SETTINGS = env.json("BILLING_SETTINGS")
 BILLING_COST_PER_WHATSAPP = env.float("BILLING_COST_PER_WHATSAPP")
 
 TOKEN_EXTERNAL_AUTHENTICATION = env.str("TOKEN_EXTERNAL_AUTHENTICATION")
+
+# Odoo
+ODOO_DB = env.str("ODOO_DB")
+ODOO_USERNAME = env.str("ODOO_USERNAME")
+ODOO_PASSWORD = env.str("ODOO_PASSWORD")
+ODOO_BASE_URL = env.str("ODOO_BASE_URL")
