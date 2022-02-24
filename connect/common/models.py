@@ -157,7 +157,7 @@ class Organization(models.Model):
             "organization_name": self.name
         }
         mail.send_mail(
-            _(f"You are going out of {self.name}"),
+            _("You are going out of") + self.name,
             render_to_string("common/emails/organization/org_going_out.txt", context),
             None,
             [email],
@@ -174,7 +174,7 @@ class Organization(models.Model):
             "organization_name": self.name
         }
         mail.send_mail(
-            _(f"You have been removed from {self.name}"),
+            _("You have been removed from ") + self.name,
             render_to_string("common/emails/organization/org_removed.txt", context),
             None,
             [email],
@@ -211,7 +211,7 @@ class Organization(models.Model):
             "first_name": first_name,
         }
         mail.send_mail(
-            _(f"You have been removed from the {self.name}"),
+            _(f"You have been removed from the ") + self.name,
             render_to_string(
                 "common/emails/organization/remove_permission_organization.txt", context
             ),
@@ -232,7 +232,7 @@ class Organization(models.Model):
             "first_name": first_name,
         }
         mail.send_mail(
-            _(f"{self.name} no longer exists!"),
+            self.name + _(" no longer exists!"),
             render_to_string("common/emails/organization/delete_organization.txt", context),
             None,
             [email],
@@ -253,7 +253,7 @@ class Organization(models.Model):
             "organization_new_name": organization_new_name
         }
         mail.send_mail(
-            _(f"{organization_previous_name} now it's {organization_new_name}"),
+            organization_previous_name +  _(" now it's ") + organization_new_name,
             render_to_string("common/emails/organization/change_organization_name.txt", context),
             None,
             [email],
@@ -447,7 +447,7 @@ class Project(models.Model):
             "first_name": first_name,
         }
         mail.send_mail(
-            _(f"You have been invited to join the {self.name} organization"),
+            _("You have been invited to join the ") + self.name + _(" organization"),
             render_to_string("common/emails/project/project_create.txt", context),
             None,
             [email],
@@ -491,7 +491,7 @@ class Project(models.Model):
             "secondary_lang_now": secondary_lang_now,
         }
         mail.send_mail(
-            _(f"The project {self.name} has changed"),
+            _("The project ") + self.name + _(" has changed"),
             render_to_string("common/emails/project/project-changed.txt", context),
             None,
             [email],
@@ -872,7 +872,7 @@ class BillingPlan(models.Model):
             "user_name": user_name
         }
         mail.send_mail(
-            _(f"A credit card has been added to the organization {self.organization.name}"),
+            _("A credit card has been added to the organization ") + self.organization.name,
             render_to_string("billing/emails/added_card.txt", context),
             None,
             email,
@@ -889,7 +889,7 @@ class BillingPlan(models.Model):
             "user_name": user_name
         }
         mail.send_mail(
-            _(f"A credit card has been changed to the organization {self.organization.name}"),
+            _("A credit card has been changed to the organization ") + self.organization.name,
             render_to_string("billing/emails/changed_card.txt", context),
             None,
             email,
@@ -906,7 +906,7 @@ class BillingPlan(models.Model):
             "user_name": user_name
         }
         mail.send_mail(
-            _(f"Your {self.organization.name} organization's plan has ended"),
+            _("Your ") + self.organization.name + _("organization's plan has ended"),
             render_to_string("billing/emails/finished-plan.txt", context),
             None,
             email,
@@ -923,7 +923,7 @@ class BillingPlan(models.Model):
             "user_name": user_name
         }
         mail.send_mail(
-            _(f"Your {self.organization.name} organization's plan has been reactivated."),
+            _("Your ") + self.organization.name + _(" organization's plan has been reactivated."),
             render_to_string("billing/emails/reactived-plan.txt", context),
             None,
             email,
@@ -940,7 +940,7 @@ class BillingPlan(models.Model):
             "org_name": self.organization.name
         }
         mail.send_mail(
-            _(f"Your {self.organization.name} organization credit card was removed"),
+            _("Your ") + self.organization.name + _(" organization credit card was removed"),
             render_to_string("billing/emails/removed_card.txt", context),
             None,
             email,
@@ -957,7 +957,7 @@ class BillingPlan(models.Model):
             "user_name": user_name
         }
         mail.send_mail(
-            _(f"The organization {self.organization.name} has already surpassed 200 active contacts"),
+            _("The organization ") + self.organization.name + _(" has already surpassed 200 active contacts"),
             render_to_string("billing/emails/free-plan-expired.txt", context),
             None,
             email,
@@ -975,7 +975,7 @@ class BillingPlan(models.Model):
             "plan": plan
         }
         mail.send_mail(
-            _(f"Your {self.organization.name} organization has the {plan.title()} Plan"),
+            _("Your ") + self.organization.name + _(" organization has the ") + plan.title() + _(" Plan"),
             render_to_string("billing/emails/free_plan.txt", context),
             None,
             [email],
@@ -994,7 +994,7 @@ class BillingPlan(models.Model):
             "actual_plan": self.plan
         }
         mail.send_mail(
-            _(f"Your {self.organization.name} organization's plan has been changed."),
+            _("Your ") + self.organization.name + _(" organization's plan has been changed."),
             render_to_string("billing/emails/changed-plan.txt", context),
             None,
             email,
