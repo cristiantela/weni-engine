@@ -30,6 +30,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             "total_contact_count",
             "menu",
             "created_at",
+            "is_active"
         ]
         ref_name = None
 

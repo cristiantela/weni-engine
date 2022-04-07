@@ -56,7 +56,7 @@ class ProjectViewSet(
 
         filter = Q(project_authorizations__user=self.request.user) & ~Q(
             project_authorizations__role=0
-        )
+        ) & Q(is_active=True)
 
         return self.queryset.filter(organization__pk__in=auth).filter(filter)
 
