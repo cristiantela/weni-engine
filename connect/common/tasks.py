@@ -283,7 +283,11 @@ def check_organization_free_plan():
     return True
 
 
-@app.task()
+@app.task(
+    autoretry_for=(_InactiveRpcError, Exception),
+    retry_kwargs={"max_retries": 5},
+    retry_backoff=True,
+)
 def sync_active_contacts():
     flow_instance = utils.get_grpc_types().get("flow")
     for project in Project.objects.filter(is_active=True):
@@ -303,7 +307,11 @@ def sync_active_contacts():
     return True
 
 
-@app.task()
+@app.task(
+    autoretry_for=(_InactiveRpcError, Exception),
+    retry_kwargs={"max_retries": 5},
+    retry_backoff=True,
+)
 def sync_total_contact_count():
     flow_instance = utils.get_grpc_types().get("flow")
     for project in Project.objects.filter(is_active=True):
@@ -312,7 +320,11 @@ def sync_total_contact_count():
     return True
 
 
-@app.task()
+@app.task(
+    autoretry_for=(_InactiveRpcError, Exception),
+    retry_kwargs={"max_retries": 5},
+    retry_backoff=True,
+)
 def sync_project_information():
     flow_instance = utils.get_grpc_types().get("flow")
     for project in Project.objects.all():
@@ -327,7 +339,11 @@ def sync_project_information():
             project.save(update_fields=['name', 'timezone', 'date_format', 'is_active'])
 
 
-@app.task()
+@app.task(
+    autoretry_for=(_InactiveRpcError, Exception),
+    retry_kwargs={"max_retries": 5},
+    retry_backoff=True,
+)
 def sync_project_statistics():
     flow_instance = utils.get_grpc_types().get("flow")
     for project in Project.objects.filter(is_active=True):
@@ -340,7 +356,11 @@ def sync_project_statistics():
             project.save(update_fields=["flow_count"])
 
 
-@app.task()
+@app.task(
+    autoretry_for=(_InactiveRpcError, Exception),
+    retry_kwargs={"max_retries": 5},
+    retry_backoff=True,
+)
 def sync_repositories_statistics():
     flow_instance = utils.get_grpc_types().get("flow")
     inteligence_instance = utils.get_grpc_types().get("inteligence")
@@ -362,7 +382,11 @@ def sync_repositories_statistics():
         project.save(update_fields=["inteligence_count"])
 
 
-@app.task()
+@app.task(
+    autoretry_for=(_InactiveRpcError, Exception),
+    retry_kwargs={"max_retries": 5},
+    retry_backoff=True,
+)
 def sync_channels_statistics():
     flow_instance = utils.get_grpc_types().get("flow")
     for project in Project.objects.filter(is_active=True):
