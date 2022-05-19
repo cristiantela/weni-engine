@@ -2,4 +2,4 @@
 cd $WORKDIR
 python manage.py collectstatic --noinput
 
-gunicorn connect.wsgi --timeout 999999 -c gunicorn.conf.py
+gunicorn connect.wsgi --timeout 60 -c gunicorn.conf.py
