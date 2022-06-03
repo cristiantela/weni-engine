@@ -364,15 +364,17 @@ def sync_repositories_statistics():
         project.save(update_fields=["inteligence_count"])
 
 
-@app.task(name="sync_channels_statistics")
+@app.task()
 def sync_channels_statistics():
     flow_instance = utils.get_grpc_types().get("flow")
     for project in Project.objects.all():
-        project.extra_active_integration = len(
-            list(
+        channels = []
+        for channel in list(
                 flow_instance.list_channel(project_uuid=str(project.flow_organization))
-            )
-        )
+            ):
+            if not "558231420933" in channel.address:
+                channels.append(channel)
+        project.extra_active_integration = len(channels)
         project.save(update_fields=["extra_active_integration"])
 
 
