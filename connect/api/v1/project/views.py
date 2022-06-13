@@ -265,19 +265,10 @@ class ProjectViewSet(
 
         if serializer.is_valid(raise_exception=True):
             classifier_uuid = serializer.validated_data.get("uuid")
-
             task = tasks.retrieve_classifier.delay(classifier_uuid=classifier_uuid)
             task.wait()
             response = task.result
-
-            data = {
-                "authorization_uuid": response.get("access_token"),
-                "classifier_type": response.get("classifier_type"),
-                "name": response.get("name"),
-                "is_active": response.get("is_active"),
-                "uuid": response.get("uuid"),
-            }
-            return JsonResponse(status=status.HTTP_200_OK, data=data)
+            return JsonResponse(status=status.HTTP_200_OK, data=response)
 
     @action(
         detail=True,
@@ -300,17 +291,7 @@ class ProjectViewSet(
                 access_token=serializer.validated_data.get("access_token")
             )
             task.wait()
-            response = task.result
-
-            created_classifier = {
-                "authorization_uuid": response.get("access_token"),
-                "classifier_type": response.get("classifier_type"),
-                "name": response.get("name"),
-                "is_active": response.get("is_active"),
-                "uuid": response.get("uuid"),
-            }
-
-            return JsonResponse(status=status.HTTP_200_OK, data=created_classifier)
+            return JsonResponse(status=status.HTTP_200_OK, data=task.result)
 
     @action(
         detail=True,
@@ -325,19 +306,10 @@ class ProjectViewSet(
         if serializer.is_valid(raise_exception=True):
             project_uuid = serializer.validated_data.get("project_uuid")
             project = Project.objects.get(uuid=project_uuid)
-
             task = tasks.list_classifiers.delay(project_uuid=str(project.flow_organization))
             task.wait()
             response = task.result
-            classifiers = {"data": []}
-            for i in response:
-                classifiers["data"].append({
-                    "authorization_uuid": i.get("authorization_uuid"),
-                    "classifier_type": i.get("classifier_type"),
-                    "name": i.get("name"),
-                    "is_active": i.get("is_active"),
-                    "uuid": i.get("uuid"),
-                })
+            classifiers = {"data": response}
             return JsonResponse(status=status.HTTP_200_OK, data=classifiers)
 
 

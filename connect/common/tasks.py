@@ -615,10 +615,16 @@ def delete_classifier(classifier_uuid, user_email):
 @app.task(name='retrieve_classifier')
 def retrieve_classifier(classifier_uuid):
     grpc_instance = utils.get_grpc_types().get("flow")
-    response = grpc_instance.get_classifier(
+    classifier = grpc_instance.get_classifier(
         classifier_uuid=classifier_uuid,
     )
-    return response
+    return {
+            "authorization_uuid": classifier.authorization_uuid,
+            "classifier_type": classifier.classifier_type,
+            "name": classifier.name,
+            "is_active": classifier.is_active,
+            "uuid": classifier.uuid,
+        }
 
 
 @app.task(name='create_classifier')
@@ -631,7 +637,14 @@ def create_classifier(project_uuid, user_email, classifier_name, access_token):
         classifier_name=classifier_name,
         access_token=access_token,
     )
-    return response
+
+    return {
+        "authorization_uuid": response.access_token,
+        "classifier_type": response.classifier_type,
+        "name": response.name,
+        "is_active": response.is_active,
+        "uuid": response.uuid,
+    }
 
 
 @app.task(name='list_classifiers')
@@ -642,4 +655,13 @@ def list_classifiers(project_uuid):
         classifier_type="bothub",
         is_active=True,
     )
-    return list(response)
+    classifiers = []
+    for classifier in response:
+        classifiers.append({
+            "authorization_uuid": classifier.authorization_uuid,
+            "classifier_type": classifier.classifier_type,
+            "name": classifier.name,
+            "is_active": classifier.is_active,
+            "uuid": classifier.uuid,
+        })
+    return classifiers
