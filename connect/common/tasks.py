@@ -602,6 +602,22 @@ def create_channel(user, project_uuid, data, channeltype_code):
         raise error
 
 
+@app.task(name="create_wac_channel")
+def create_wac_channel(user, flow_organization, config, phone_number_id):
+    grpc_instance = utils.get_grpc_types().get("flow")
+    try:
+        response = grpc_instance.create_wac_channel(
+            user=serializer.validated_data.get("user"),
+            flow_organization=str(project.flow_organization),
+            config=serializer.validated_data.get("config"),
+            phone_number_id=serializer.validated_data.get("phone_number_id"),
+        )
+    except grpc.RpcError as error:
+        if error.code() is grpc.StatusCode.INVALID_ARGUMENT:
+            self.context.abort(grpc.StatusCode.INVALID_ARGUMENT, "Bad Request")
+        raise error
+
+
 @app.task(name='delete_classifier')
 def delete_classifier(classifier_uuid, user_email):
     grpc_instance = utils.get_grpc_types().get("flow")

@@ -232,6 +232,22 @@ class ProjectViewSet(
             task.wait()
             return JsonResponse(status=status.HTTP_200_OK, data=task.result)
 
+    def create_wac_channel(self, request):
+        serializer  = CreateWACChannelSerializer(data=request.data)
+        if serializer.is_valid(raise_exception=True):
+            project_uuid = serializer.validated_data.get("project_uuid")
+            project = Project.objects.get(uuid=project_uuid)
+
+            task.create_wac_channel.delay(
+                user=serializer.validated_data.get("user"),
+                flow_organization=str(project.flow_organization),
+                config=serializer.validated_data.get("config"),
+                phone_number_id=serializer.validated_data.get("phone_number_id"),
+            )
+
+            task.wait()
+            return JsonResponse(status=status.HTTP_200_OK, data=task.result)
+
     @action(
         detail=True,
         methods=["DELETE"],
