@@ -37,7 +37,6 @@ class BillingPlanSerializer(serializers.ModelSerializer):
             "problem_capture_invoice",
             "currenty_invoice",
             "contract_on",
-            "is_card_valid"
         ]
         ref_name = None
 
@@ -102,6 +101,7 @@ class OrganizationSeralizer(serializers.HyperlinkedModelSerializer):
             "created_at",
             "is_suspended",
             "extra_integration",
+            "enforce_2fa"
         ]
         ref_name = None
 
@@ -125,6 +125,11 @@ class OrganizationSeralizer(serializers.HyperlinkedModelSerializer):
         help_text=_("Whether this organization is currently suspended."),
     )
     extra_integration = serializers.IntegerField(read_only=True)
+    enforce_2fa = serializers.BooleanField(
+        label=_("enforce 2fa"),
+        required=False,
+        help_text=_("if this field is true, only users with 2fa activated can access the org")
+    )
 
     def create(self, validated_data):
         task = tasks.create_organization.delay(  # pragma: no cover

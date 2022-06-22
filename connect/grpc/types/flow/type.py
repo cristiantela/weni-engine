@@ -232,6 +232,18 @@ class FlowType(GRPCType):
         )
         return response
 
+    def create_wac_channel(self, user: str, flow_organization: str, config: str, phone_number_id: str):
+        stub = channel_pb2_grpc.ChannelControllerStub(self.channel)
+        response = stub.CreateWAC(
+            channel_pb2.ChannelWACCreateRequest(
+                user=user,
+                org=flow_organization,
+                config=config,
+                phone_number_id=phone_number_id,
+            )
+        )
+        return response
+
     def release_channel(self, channel_uuid: str, user: str):
         stub = channel_pb2_grpc.ChannelControllerStub(self.channel)
         response = stub.Destroy(
@@ -266,5 +278,17 @@ class FlowType(GRPCType):
             permission=self.permissions.get(permission),
         )
         response = stub.Remove(request)
+
+        return response
+
+    def get_message(self, org_uuid: str, contact_uuid: str, before: str, after: str):
+        stub = billing_pb2_grpc.BillingControllerStub(self.channel)
+        request = billing_pb2.MessageDetailRequest(
+            org_uuid=org_uuid,
+            contact_uuid=contact_uuid,
+            before=before,
+            after=after
+        )
+        response = stub.MessageDetail(request)
 
         return response

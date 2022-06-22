@@ -2,6 +2,7 @@ import logging
 
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
+from django.utils import timezone
 
 from connect.authentication.models import User
 from connect.common.models import (
@@ -17,6 +18,7 @@ from connect.common.models import (
     ProjectRoleLevel,
     RocketAuthorization,
     RequestRocketPermission,
+    OpenedProject,
 )
 from connect.celery import app as celery_app
 
@@ -73,9 +75,31 @@ def update_organization(instance, **kwargs):
         )
 
 
+@receiver(post_delete, sender=ProjectAuthorization)
+def delete_opened_project(sender, instance, **kwargs):
+    opened = OpenedProject.objects.filter(user=instance.user, project=instance.project)
+    if opened.exists():
+        opened.delete()
+
+
 @receiver(post_save, sender=OrganizationAuthorization)
-def org_authorizations(sender, instance, **kwargs):
+def org_authorizations(sender, instance, created, **kwargs):
+
     if instance.role is not OrganizationLevelRole.NOTHING.value:
+        if created:
+            for project in instance.organization.project.all():
+                project_perm = project.project_authorizations.filter(user=instance.user)
+                if not project_perm.exists():
+                    project.project_authorizations.create(
+                        user=instance.user,
+                        role=instance.role,
+                        organization_authorization=instance,
+                    )
+                else:
+                    project_perm = project_perm.first()
+                    if instance.role > project_perm.role:
+                        project_perm.role = instance.role
+                        project_perm.save(update_fields=["role"])
         celery_app.send_task(
             "update_user_permission_organization",
             args=[
@@ -88,6 +112,9 @@ def org_authorizations(sender, instance, **kwargs):
 
 @receiver(post_delete, sender=OrganizationAuthorization)
 def delete_authorizations(instance, **kwargs):
+    for project in instance.organization.project.all():
+        project.project_authorizations.filter(user__email=instance.user.email).delete()
+
     instance.organization.send_email_remove_permission_organization(
         first_name=instance.user.first_name, email=instance.user.email
     )
@@ -101,7 +128,11 @@ def request_permission_organization(sender, instance, created, **kwargs):
             user = user.first()
             perm = instance.organization.get_user_authorization(user=user)
             perm.role = instance.role
-            perm.save(update_fields=["role"])
+            update_fields = ["role"]
+            if user.has_2fa:
+                perm.has_2fa = True
+                update_fields.append("has_2fa")
+            perm.save(update_fields=update_fields)
             if perm.can_contribute:
                 for proj in instance.organization.project.all():
                     project_perm = proj.project_authorizations.filter(user=user)
@@ -161,6 +192,17 @@ def project_authorization(sender, instance, created, **kwargs):
                 instance.user
             )
         )
+        opened = OpenedProject.objects.filter(project=instance.project, user=instance.user)
+        if not opened.exists():
+            OpenedProject.objects.create(
+                user=instance.user,
+                project=instance.project,
+                day=instance.project.created_at
+            )
+        else:
+            opened = opened.first()
+            opened.day = timezone.now()
+            opened.save()
         if instance_user.level == OrganizationLevelRole.NOTHING.value:
             instance_user.role = OrganizationRole.VIEWER.value
             instance_user.save(update_fields=["role"])

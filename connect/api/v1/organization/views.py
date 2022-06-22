@@ -8,7 +8,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.generics import get_object_or_404
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 from connect.api.v1.metadata import Metadata
@@ -18,9 +18,9 @@ from connect.api.v1.organization.filters import (
     RequestPermissionOrganizationFilter,
 )
 from connect.api.v1.organization.permissions import (
+    Has2FA,
     OrganizationHasPermission,
     OrganizationAdminManagerAuthorization,
-    OrganizationHasPermissionBilling,
 )
 from connect.api.v1.organization.serializers import (
     OrganizationSeralizer,
@@ -39,9 +39,9 @@ from connect.common.models import (
     OrganizationRole,
     ProjectRole
 )
-from connect.middleware import ExternalAuthentication
 from connect import billing
 from connect.billing.gateways.stripe_gateway import StripeGateway
+from connect.utils import count_contacts
 
 
 class OrganizationViewSet(
@@ -54,7 +54,7 @@ class OrganizationViewSet(
 ):
     queryset = Organization.objects.all()
     serializer_class = OrganizationSeralizer
-    permission_classes = [IsAuthenticated, OrganizationHasPermission]
+    permission_classes = [IsAuthenticated, OrganizationHasPermission, Has2FA]
     lookup_field = "uuid"
     metadata_class = Metadata
 
@@ -154,8 +154,6 @@ class OrganizationViewSet(
         methods=["GET"],
         url_name="get-contact-active",
         url_path="grpc/contact-active/(?P<organization_uuid>[^/.]+)",
-        authentication_classes=[ExternalAuthentication],
-        permission_classes=[AllowAny],
     )
     def get_contact_active(
         self, request, organization_uuid, **kwargs
@@ -176,24 +174,12 @@ class OrganizationViewSet(
         result = {"projects": []}
 
         for project in organization.project.all():
-            task = celery_app.send_task(
-                "get_billing_total_statistics",
-                args=[
-                    str(project.flow_organization),
-                    before,
-                    after,
-                ],
-            )
-
-            task.wait()
-            contact_count = task.result.get("active_contacts")
-
             result["projects"].append(
                 {
                     "uuid": project.uuid,
                     "name": project.name,
                     "flow_organization": project.flow_organization,
-                    "active_contacts": contact_count,
+                    "active_contacts": count_contacts(before=before, after=after),
                 }
             )
 
@@ -204,8 +190,6 @@ class OrganizationViewSet(
         methods=["GET"],
         url_name="get-contact-active-per-project",
         url_path="contact-active-per-project/(?P<organization_uuid>[^/.]+)",
-        authentication_classes=[ExternalAuthentication],
-        permission_classes=[AllowAny],
     )
     def get_contacts_active_per_project(self, request, organization_uuid):
         org = get_object_or_404(Organization, uuid=organization_uuid)
@@ -225,9 +209,7 @@ class OrganizationViewSet(
         detail=True,
         methods=["GET"],
         url_name="get-org-active-contacts",
-        authentication_classes=[ExternalAuthentication],
         url_path="org-active-contacts/(?P<organization_uuid>[^/.]+)",
-        permission_classes=[IsAuthenticated, OrganizationHasPermission],
     )
     def get_active_org_contacts(self, request, organization_uuid):
         organization = get_object_or_404(Organization, uuid=organization_uuid)
@@ -245,8 +227,6 @@ class OrganizationViewSet(
         methods=["GET"],
         url_name="get-stripe-card-data",
         url_path="get-stripe-card-data/(?P<organization_uuid>[^/.]+)",
-        authentication_classes=[ExternalAuthentication],
-        permission_classes=[AllowAny],
     )
     def get_stripe_card_data(self, request, organization_uuid):
         if not organization_uuid:
@@ -263,7 +243,6 @@ class OrganizationViewSet(
         methods=["PATCH"],
         url_name="billing-closing-plan",
         url_path="billing/closing-plan/(?P<organization_uuid>[^/.]+)",
-        permission_classes=[IsAuthenticated, OrganizationHasPermission],
     )
     def closing_plan(self, request, organization_uuid):  # pragma: no cover
         result = {}
@@ -301,7 +280,6 @@ class OrganizationViewSet(
         methods=["PATCH"],
         url_name="billing-reactivate-plan",
         url_path="billing/reactivate-plan/(?P<organization_uuid>[^/.]+)",
-        permission_classes=[IsAuthenticated, OrganizationHasPermission],
     )
     def reactivate_plan(self, request, organization_uuid):  # pragma: no cover
 
@@ -340,7 +318,6 @@ class OrganizationViewSet(
         methods=["PATCH"],
         url_name="billing-change-plan",
         url_path="billing/change-plan/(?P<organization_uuid>[^/.]+)",
-        permission_classes=[IsAuthenticated, OrganizationHasPermission],
     )
     def change_plan(self, request, organization_uuid):
         plan = request.data.get("organization_billing_plan")
@@ -367,8 +344,6 @@ class OrganizationViewSet(
         methods=["GET"],
         url_name="organization-on-limit",
         url_path="billing/organization-on-limit/(?P<organization_uuid>[^/.]+)",
-        authentication_classes=[ExternalAuthentication],
-        permission_classes=[AllowAny],
     )
     def organization_on_limit(self, request, organization_uuid):
         organization = get_object_or_404(Organization, uuid=organization_uuid)
@@ -412,8 +387,6 @@ class OrganizationViewSet(
         methods=["GET", "PATCH"],
         url_name="active-contacts-limit",
         url_path="billing/active-contacts-limit",
-        authentication_classes=[ExternalAuthentication],
-        permission_classes=[AllowAny],
     )
     def active_contacts_limit(self, request):  # pragma: no cover
         limit = GenericBillingData.get_generic_billing_data_instance()
@@ -429,7 +402,6 @@ class OrganizationViewSet(
         methods=["POST"],
         url_name="additional-billing-information",
         url_path="billing/add-additional-information/(?P<organization_uuid>[^/.]+)",
-        permission_classes=[IsAuthenticated, OrganizationHasPermissionBilling],
     )
     def add_additional_billing_information(self, request, organization_uuid):
         organization = get_object_or_404(Organization, uuid=organization_uuid)
@@ -475,8 +447,6 @@ class OrganizationViewSet(
         methods=["GET"],
         url_name="billing-precification",
         url_path="billing/precification",
-        authentication_classes=[ExternalAuthentication],
-        permission_classes=[AllowAny],
     )
     def get_billing_precification(self, request):
         billing_data = GenericBillingData.get_generic_billing_data_instance()
@@ -487,7 +457,6 @@ class OrganizationViewSet(
         methods=["GET"],
         url_name="extra-integrations",
         url_path="billing/extra-integrations/(?P<organization_uuid>[^/.]+)",
-        permission_classes=[IsAuthenticated, OrganizationHasPermissionBilling],
     )
     def get_extra_active_integrations(self, request, organization_uuid):
         organization = get_object_or_404(Organization, uuid=organization_uuid)
@@ -500,16 +469,35 @@ class OrganizationViewSet(
 
     @action(
         detail=True,
-        methods=["POST"],
-        url_name="validate-customer-card",
-        url_path="billing/validate-customer-card",
+        methods=["PATCH"],
+        url_name="enforce-users-2fa",
+        url_path="enforce-two-factor-auth/(?P<organization_uuid>[^/.]+)",
+    )
+    def set_2fa_required(self, request, organization_uuid):
+        flag = request.data.get("2fa_required")
+        organization = get_object_or_404(Organization, uuid=organization_uuid)
+        organization.set_2fa_required(flag)
+        data = {"2fa_required": organization.enforce_2fa}
+        return JsonResponse(data=data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=True,
+        methods=['POST'],
+        url_path="billing/validate-customer-card"
+
     )
     def validate_customer_card(self, request):
         customer = request.data.get("customer")
-        gateway = billing.get_gateway("stripe")
-        gateway.verification_charge(customer)
+        if customer:
+            gateway = billing.get_gateway("stripe")
+            response = gateway.verify_payment_method(customer)
+            response["charge"] = None
 
-        return JsonResponse(data={"message": customer}, status=status.HTTP_200_OK)
+            if response["cvc_check"]:
+                response["charge"] = gateway.card_verification_charge(customer)
+
+            return JsonResponse(data=response, status=status.HTTP_200_OK)
+        return JsonResponse(data={"response": "no customer"}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(
         detail=True,
