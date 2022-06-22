@@ -26,6 +26,7 @@ from connect.api.v1.project.serializers import (
     RetrieveClassifierSerializer,
     CreateClassifierSerializer,
     ClassifierSerializer,
+    CreateWACChannelSerializer,
 )
 from connect.celery import app as celery_app
 from connect.common.models import (
@@ -228,7 +229,6 @@ class ProjectViewSet(
         methods=["GET"],
         url_name="realease-channel",
         serializer_class=ReleaseChannelSerializer,
-        authentication_classes=[ExternalAuthentication],
         permission_classes=[ModuleHasPermission],
     )
     def release_channel(self, request):
@@ -263,13 +263,18 @@ class ProjectViewSet(
             task.wait()
             return JsonResponse(status=status.HTTP_200_OK, data=task.result)
 
+    @action(
+        detail=True,
+        methods=["POST"],
+        url_name='create-wac-channel',
+        permission_classes=[ModuleHasPermission],
+    )
     def create_wac_channel(self, request):
         serializer  = CreateWACChannelSerializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
             project_uuid = serializer.validated_data.get("project_uuid")
             project = Project.objects.get(uuid=project_uuid)
-
-            task.create_wac_channel.delay(
+            task = tasks.create_wac_channel.delay(
                 user=serializer.validated_data.get("user"),
                 flow_organization=str(project.flow_organization),
                 config=serializer.validated_data.get("config"),

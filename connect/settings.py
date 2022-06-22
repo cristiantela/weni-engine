@@ -77,7 +77,6 @@ env = environ.Env(
     ROCKET_PASSWORD=(str, None),
     ROCKET_TEST_MODE=(bool, False),
     INTELLIGENCE_REST_ENDPOINT=(str, "https://engine-ai.dev.cloud.weni.ai/"),
-    ROCKET_TEST_MODE=(bool, False),
     VERIFICATION_AMOUNT=(float, 1),
 )
 

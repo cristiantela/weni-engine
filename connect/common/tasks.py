@@ -592,6 +592,12 @@ def create_wac_channel(user, flow_organization, config, phone_number_id):
             config=serializer.validated_data.get("config"),
             phone_number_id=serializer.validated_data.get("phone_number_id"),
         )
+        return dict(
+            uuid=response.uuid,
+            name=response.name,
+            config=response.config,
+            address=response.address
+        )
     except grpc.RpcError as error:
         if error.code() is grpc.StatusCode.INVALID_ARGUMENT:
             self.context.abort(grpc.StatusCode.INVALID_ARGUMENT, "Bad Request")
