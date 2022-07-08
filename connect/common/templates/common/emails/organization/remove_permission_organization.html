@@ -36,7 +36,7 @@
               margin-top: 24px;
             "
           >
-            {% trans 'You left the' %} {{ organization_name }}...
+            {% trans 'you don't have access to data from ' %} {{ organization_name }}...
           </div>
 
           <div
@@ -50,7 +50,7 @@
               margin-top: 24px;
             "
           >
-            {% trans 'His departure from the' %} {{ organization_name }} {% trans 'was accomplished. We were sad about your departure, but we understand that life goes by and things change' %}
+            {% trans 'Your contributor permission has been deleted, you can still build chatbots with artificial intelligence on the Weni Platform.' %}
             <span style="margin-left: 1px">
               <img
                 style="max-height: 16px"
@@ -59,7 +59,7 @@
               />
             </span>
             <p style="margin-top: 24px; margin-bottom: 0">
-              {% trans 'You can still create other organizations and projects if you want to continue with us!' %}
+              {% trans 'If you do not know about this message, please contact the'} {{ organization_name }} {% trans 'Administrator.' %}
             </p>
           </div>
         </section>
