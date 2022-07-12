@@ -457,3 +457,6 @@ ROCKET_TEST_MODE = env.bool("ROCKET_TEST_MODE")
 
 # Elastic Search
 FLOWS_ELASTIC_URL = env.str("FLOWS_ELASTIC_URL")
+
+# ensure that the endpoints will be https
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
