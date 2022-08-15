@@ -1529,3 +1529,24 @@ class GenericBillingData(models.Model):
         elif contact_count >= 250000:
             value_total = contact_count * self._from_2500001
         return float(value_total)
+
+
+class TemplateProject(models.Model):
+    uuid = models.UUIDField(
+        _("UUID"), primary_key=True, default=uuid4.uuid4, editable=False
+    )
+    project = models.ForeignKey(Project, models.CASCADE, related_name="template_project")
+    wa_demo_token = models.CharField(max_length=30)
+    classifier_uuid = models.UUIDField(
+        _("UUID"), default=uuid4.uuid4
+    )
+    first_access = models.BooleanField(default=True)
+    # user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE)
+    authorization = models.ForeignKey(ProjectAuthorization, on_delete=models.CASCADE)
+    flow_uuid = models.UUIDField(
+        _("UUID"), default=uuid4.uuid4
+    )
+
+    @property
+    def user(self):
+        return self.authorization.user
