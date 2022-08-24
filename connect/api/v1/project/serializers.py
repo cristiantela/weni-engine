@@ -130,19 +130,20 @@ class ProjectSerializer(serializers.ModelSerializer):
             self.context["request"].user.email,
             str(validated_data.get("timezone")),
         )
-        chats_client = ChatsRESTClient()
         if not settings.TESTING:
             task.wait()  # pragma: no cover
 
         project = task.result
         validated_data.update({"flow_organization": project.get("uuid")})
         instance = super().create(validated_data)
-        chats_client.create_chat_project(
-            project_uuid=str(instance.uuid),
-            project_name=instance.name,
-            date_format=instance.date_format,
-            timezone=str(instance.timezone)
-        )
+        if not settings.TESTING:
+            chats_client = ChatsRESTClient()
+            chats_client.create_chat_project(
+                project_uuid=str(instance.uuid),
+                project_name=instance.name,
+                date_format=instance.date_format,
+                timezone=str(instance.timezone)
+            )
         return instance
 
     def update(self, instance, validated_data):
