@@ -8,6 +8,7 @@ from connect.api.v1.fields import PasswordField
 from connect.authentication.models import User
 
 from connect.api.v1.internal.integrations.integrations_rest_client import IntegrationsRESTClient
+from connect.api.v1.internal.chats.chats_rest_client import ChatsRESTClient
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -58,8 +59,15 @@ class UserSerializer(serializers.ModelSerializer):
 
         if "first_name" in validated_data or "last_name" in validated_data:
             integrations_client = IntegrationsRESTClient()
+            chats_client = ChatsRESTClient()
 
             integrations_client.update_user(
+                user_email=update_instance.email,
+                first_name=update_instance.first_name,
+                last_name=update_instance.last_name
+            )
+
+            chats_client.update_user(
                 user_email=update_instance.email,
                 first_name=update_instance.first_name,
                 last_name=update_instance.last_name
