@@ -141,7 +141,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             project_uuid=str(instance.uuid),
             project_name=instance.name,
             date_format=instance.date_format,
-            timezone=instance.timezone
+            timezone=str(instance.timezone)
         )
         return instance
 
