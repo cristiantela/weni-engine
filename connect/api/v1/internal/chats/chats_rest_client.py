@@ -15,7 +15,7 @@ class ChatsRESTClient:
     ):
         body = dict(role=permission, user=user_email, project=project_uuid)
         requests.put(
-            url=f"{self.base_url}/",
+            url=f"{self.base_url}/v1/internal/permission/project/{project_uuid}/",
             headers=self.authentication_instance.headers,
             json=body,
         )
@@ -24,7 +24,7 @@ class ChatsRESTClient:
     def update_user_language(self, user_email: str, language: str):
         body = dict(user_email=user_email, language=language)
         requests.put(
-            url=f"{self.base_url}/",
+            url=f"{self.base_url}/v1/internal/user/language/",
             headers=self.authentication_instance.headers,
             json=body,
         )
