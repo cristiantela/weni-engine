@@ -118,7 +118,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             "inteligence": settings.INTELIGENCE_URL,
             "flows": settings.FLOWS_URL,
             "integrations": settings.INTEGRATIONS_URL,
-            "chats": settings.CHATS_URL,
+            "chats": chats,
             "chat": list(
                 obj.service_status.filter(
                     service__service_type=Service.SERVICE_TYPE_CHAT
