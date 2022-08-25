@@ -49,6 +49,7 @@ env = environ.Env(
     WEBAPP_BASE_URL=(str, "https://dash.weni.ai"),
     INTELIGENCE_URL=(str, "https://bothub.it/"),
     FLOWS_URL=(str, "https://new.push.al/"),
+    CHATS_URL=(str, "https://chats.dev.cloud.weni.ai/"),
     FLOWS_ELASTIC_URL=(str, None),
     FLOWS_REST_ENDPOINT=(str, "https://flows-staging.weni.ai"),
     INTEGRATIONS_URL=(str, None),
@@ -416,6 +417,7 @@ SEND_EMAILS = env.bool("SEND_EMAILS")
 INTELIGENCE_URL = env.str("INTELIGENCE_URL")
 FLOWS_URL = env.str("FLOWS_URL")
 INTEGRATIONS_URL = env.str("INTEGRATIONS_URL")
+CHATS_URL = env.str("CHATS_URL")
 
 INTEGRATIONS_REST_ENDPOINT = env.str("INTEGRATIONS_REST_ENDPOINT")
 INTELLIGENCE_REST_ENDPOINT = env.str("INTELLIGENCE_REST_ENDPOINT")

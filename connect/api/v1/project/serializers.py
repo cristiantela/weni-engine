@@ -113,10 +113,12 @@ class ProjectSerializer(serializers.ModelSerializer):
         ...
 
     def get_menu(self, obj):
+        chats = settings.CHATS_URL + "loginexternal/{{token}}/"
         return {
             "inteligence": settings.INTELIGENCE_URL,
             "flows": settings.FLOWS_URL,
             "integrations": settings.INTEGRATIONS_URL,
+            "chats": settings.CHATS_URL,
             "chat": list(
                 obj.service_status.filter(
                     service__service_type=Service.SERVICE_TYPE_CHAT
