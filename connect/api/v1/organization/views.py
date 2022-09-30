@@ -166,6 +166,14 @@ class OrganizationViewSet(
                     "uuid": uuid.uuid4()
                 }
 
+            # Create owner's organization authorization
+            RequestPermissionOrganization.objects.create(
+                email=user.email,
+                organization=new_organization,
+                role=OrganizationRole.ADMIN.value,
+                created_by=user
+            )
+
             project = Project.objects.create(
                 name=project_info.get("name"),
                 flow_id=flows_info.get("id"),
@@ -173,14 +181,6 @@ class OrganizationViewSet(
                 timezone=str(project_info.get("timezone")),
                 organization=new_organization,
                 is_template=True if project_info.get("template") else False
-            )
-
-            # Create owner's organization authorization
-            RequestPermissionOrganization.objects.create(
-                email=user.email,
-                organization=new_organization,
-                role=OrganizationRole.ADMIN.value,
-                created_by=user
             )
 
             # Create user's organizations authorizations
