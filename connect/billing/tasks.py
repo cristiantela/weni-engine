@@ -223,3 +223,40 @@ def problem_capture_invoice():
                     name="update_suspend_project",
                     args=[project.flow_organization, True],
                 )
+
+
+@app.task(name="end_trial_plan")
+def end_trial_plan():
+    yesterday = pendulum.yesterday()
+    for organization in Organization.objects.filter(organization_billing__plan=BillingPlan.PLAN_TRIAL, organization_billing__trial_end_date__date=yesterday.date()):
+        organization.organization_billing.end_trial_period()
+
+
+@app.task()
+def check_organization_plans():
+    # utc-3 or project_timezone
+    now = pendulum.now()
+    after = now.start_of('month').strftime("%Y-%m-%d %H:%M")
+    before = now.strftime("%Y-%m-%d %H:%M")
+
+    # query = (Q(organization_billing__plan=BillingPlan.PLAN_1) | Q(organization_billing__plan=BillingPlan.PLAN_2) | Q(organization_billing__plan=BillingPlan.PLAN_3)) & Q(is_suspended=False)
+
+    for organization in Organization.objects.filter(is_suspended=False).exclude(organization_billing__plan="free"):
+        for project in organization.project.all():
+            # update project contacts
+            contact_count = utils.count_contacts(
+                project_uuid=project, before=before, after=after
+            )
+            project.contact_count = int(contact_count)
+            project.save(update_fields=["contact_count"])
+
+        current_active_contacts = organization.active_contacts
+
+        if current_active_contacts > organization.organization_billing.plan_limit:
+            organization.organization_billing.end_trial_period()
+            # send email to offer upgrade
+            # organization.organization_billing.send_email_expired_free_plan(
+            #     organization.name,
+            #     organization.authorizations.values_list("user__email", flat=True),
+            # )
+    return True

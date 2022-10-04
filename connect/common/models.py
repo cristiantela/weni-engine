@@ -1,5 +1,6 @@
 import decimal
 import logging
+import pendulum
 import uuid as uuid4
 from datetime import timedelta
 from decimal import Decimal
@@ -13,12 +14,13 @@ from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 from timezone_field import TimeZoneField
 
-from connect import billing
+from connect import billing, common
 from connect.authentication.models import User
 from connect.billing.gateways.stripe_gateway import StripeGateway
 from connect.common.gateways.rocket_gateway import Rocket
 
 from enum import Enum
+
 
 logger = logging.getLogger(__name__)
 
@@ -930,13 +932,21 @@ class BillingPlan(models.Model):
     ]
 
     PLAN_FREE = "free"
+    PLAN_TRIAL = "trial"
     PLAN_ENTERPRISE = "enterprise"
     PLAN_CUSTOM = "custom"
+    PLAN_1 = "plan_1"
+    PLAN_2 = "plan_2"
+    PLAN_3 = "plan_3"
 
     PLAN_CHOICES = [
         (PLAN_FREE, _("free")),
+        (PLAN_TRIAL, _("trial")),
         (PLAN_ENTERPRISE, _("enterprise")),
         (PLAN_CUSTOM, _("custom")),
+        (PLAN_1, _("plan_1")),
+        (PLAN_2, _("plan_2")),
+        (PLAN_3, _("plan_3")),
     ]
 
     organization = models.OneToOneField(
@@ -999,6 +1009,28 @@ class BillingPlan(models.Model):
     )
 
     card_is_valid = models.BooleanField(_("Card is valid"), default=False)
+    trial_end_date = models.DateTimeField(_("Trial end date"), null=True)
+
+    def save(self, *args, **kwargs):
+        _adding = self._state.adding
+        if _adding and self.plan == self.PLAN_TRIAL:
+            self.trial_end_date = pendulum.now().end_of("day").add(months=1)
+
+        super(BillingPlan, self).save(*args, **kwargs)
+
+    def end_trial_period(self):
+        # try:
+        self.is_active = False
+        self.save(update_fields=["is_active"])
+        self.organization.is_suspended = True
+        self.organization.save(update_fields=["is_suspended"])
+
+        for project in self.organization.project.all():
+            common.tasks.update_suspend_project.delay(project.flow_organization, True)
+
+        emails = self.organization.authorizations.values_list("user__email", flat=True)
+
+        self.send_email_end_trial(emails)
 
     @property
     def get_stripe_customer(self):
@@ -1281,6 +1313,52 @@ class BillingPlan(models.Model):
             html_message=render_to_string("billing/emails/changed-plan.html", context),
         )
         return mail
+
+    def send_email_end_trial(self, email: list):
+        if not settings.SEND_EMAILS:
+            return False  # pragma: no cover
+        context = {
+            "base_url": settings.BASE_URL,
+            "webapp_base_url": settings.WEBAPP_BASE_URL,
+            "organization_name": self.organization.name,
+        }
+        mail.send_mail(
+            _("Your trial period has ended"),
+            render_to_string(
+                "common/emails/organization/end_trial.txt", context
+            ),
+            None,
+            email,
+            html_message=render_to_string(
+                "common/emails/organization/end_trial.html", context
+            ),
+        )
+        return mail
+
+    def set_trial_date(self):
+        self.trial_end_date = pendulum.now().add(months=1)
+
+    @property
+    def plan_limit(self):
+        if self.plan == self.PLAN_1:
+            return settings.PLAN_1_LIMIT
+        elif self.plan == self.PLAN_2:
+            return settings.PLAN_2_LIMIT
+        elif self.plan == self.plan_3:
+            return settings.PLAN_3_LIMIT
+        return ''
+
+    @property
+    def plan_1_limit(self):
+        return settings.PLAN_1_LIMIT
+
+    @property
+    def plan_2_limit(self):
+        return settings.PLAN_2_LIMIT
+
+    @property
+    def plan_3_limit(self):
+        return settings.PLAN_3_LIMIT
 
 
 class Invoice(models.Model):

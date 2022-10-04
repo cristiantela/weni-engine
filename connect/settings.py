@@ -82,6 +82,10 @@ env = environ.Env(
     SYNC_CONTACTS_SCHEDULE=(str, "*/1"),
     SCROLL_SIZE=(int, 500),
     SCROLL_KEEP_ALIVE=(str, "1m"),
+    PLAN_1_LIMIT=(int, 100),
+    PLAN_2_LIMIT=(int, 200),
+    PLAN_3_LIMIT=(int, 300)
+
 )
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -457,6 +461,11 @@ BILLING_COST_PER_WHATSAPP = env.float("BILLING_COST_PER_WHATSAPP")
 TOKEN_EXTERNAL_AUTHENTICATION = env.str("TOKEN_EXTERNAL_AUTHENTICATION")
 
 VERIFICATION_AMOUNT = env.float("VERIFICATION_AMOUNT")
+
+PLAN_1_LIMIT = env.int("PLAN_1_LIMIT")
+PLAN_2_LIMIT = env.int("PLAN_2_LIMIT")
+PLAN_3_LIMIT = env.int("PLAN_3_LIMIT")
+
 
 # Rocket
 ROCKET_CLIENT_ID = env.str("ROCKET_CLIENT_ID")
