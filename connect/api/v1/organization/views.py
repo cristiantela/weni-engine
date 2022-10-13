@@ -51,7 +51,7 @@ from connect.api.v1.internal.intelligence.intelligence_rest_client import Intell
 import pendulum
 from connect.common import tasks
 import logging
-
+import stripe
 
 logger = logging.getLogger(__name__)
 
@@ -230,7 +230,6 @@ class OrganizationViewSet(
         url_path="invoice/setup_intent/(?P<organization_uuid>[^/.]+)",
     )
     def setup_intent(self, request, organization_uuid, **kwargs):  # pragma: no cover
-        import stripe
 
         organization = get_object_or_404(Organization, uuid=organization_uuid)
 
@@ -491,25 +490,72 @@ class OrganizationViewSet(
         url_path="billing/upgrade-plan/(?P<organization_uuid>[^/.]+)",
     )
     def upgrade_plan(self, request, organization_uuid):
+        data = {}
         plan = request.data.get("organization_billing_plan")
         organization = get_object_or_404(Organization, uuid=organization_uuid)
+
         self.check_object_permissions(self.request, organization)
+        if not organization.organization_billing.stripe_customer:
+            return JsonResponse(data={"status": "FAILURE", "message": "Empty customer"}, status=status.HTTP_304_NOT_MODIFIED)
+
         org_billing = organization.organization_billing
         old_plan = organization.organization_billing.plan
-        change_plan = org_billing.change_plan(plan)
-        # ADD CHARGE IN STRIPE
-        if change_plan:
-            organization.organization_billing.send_email_changed_plan(
-                organization.name,
-                organization.authorizations.values_list("user__email", flat=True),
-                old_plan,
-            )
+
+        if plan == BillingPlan.PLAN_BASIC:
+            price = BillingPlan().plan_basic_info["price"]
+
+        elif plan == BillingPlan.PLAN_PLUS:
+            price = BillingPlan().plan_plus_info["price"]
+
+        elif plan == BillingPlan.PLAN_PREMIUM:
+            price = BillingPlan().plan_premium_info["price"]
+
+        elif plan == BillingPlan.PLAN_ENTERPRISE:
+            price = BillingPlan().plan_enterprise_info["price"]
+
+        if settings.TESTING:
+            p_intent = stripe.PaymentIntent(amount_received=price, id="pi_test_id", amount=price, charges={"amount": price, "amount_captured": price})
+            purchase_result = {"status": "SUCCESS", "response": p_intent}
+            if request.data.get("stripe_failure"):
+                data["status"] = "FAILURE"
+            else:
+                data["status"] = "SUCCESS"
+        else:
+            try:
+                gateway = billing.get_gateway("stripe")
+                purchase_result = gateway.purchase(
+                    money=int(price),
+                    identification=org_billing.stripe_customer,
+                )
+                data["status"] = purchase_result["status"]
+            except Exception as error:
+                logger.error(f"Stripe error: {error}")
+                data["status"] = "FAILURE"
+
+        if data["status"] == "SUCCESS":
+
+            change_plan = org_billing.change_plan(plan)
+
+            if settings.TESTING:
+                if request.data.get("plan_failure"):
+                    change_plan = False
+
+            if change_plan:
+                organization.organization_billing.send_email_changed_plan(
+                    organization.name,
+                    organization.authorizations.values_list("user__email", flat=True),
+                    old_plan,
+                )
+                return JsonResponse(
+                    data={"status": "SUCCESS", "old_plan": old_plan, "plan": org_billing.plan}, status=status.HTTP_200_OK
+                )
             return JsonResponse(
-                data={"plan": org_billing.plan}, status=status.HTTP_200_OK
+                data={"status": "FAILURE", "message": "Invalid plan choice"}, status=status.HTTP_400_BAD_REQUEST
             )
-        return JsonResponse(
-            data={"message": "Invalid plan choice"}, status=status.HTTP_400_BAD_REQUEST
-        )
+        else:
+            return JsonResponse(
+                data={"status": "FAILURE", "message": "Stripe error"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     @action(
         detail=True,

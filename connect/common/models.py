@@ -933,20 +933,20 @@ class BillingPlan(models.Model):
 
     PLAN_FREE = "free"
     PLAN_TRIAL = "trial"
+    PLAN_BASIC = "basic"
+    PLAN_PLUS = "plus"
+    PLAN_PREMIUM = "premium"
     PLAN_ENTERPRISE = "enterprise"
     PLAN_CUSTOM = "custom"
-    PLAN_1 = "plan_1"
-    PLAN_2 = "plan_2"
-    PLAN_3 = "plan_3"
 
     PLAN_CHOICES = [
         (PLAN_FREE, _("free")),
         (PLAN_TRIAL, _("trial")),
+        (PLAN_BASIC, _("basic")),
+        (PLAN_PLUS, _("plus")),
+        (PLAN_PREMIUM, _("premium")),
         (PLAN_ENTERPRISE, _("enterprise")),
         (PLAN_CUSTOM, _("custom")),
-        (PLAN_1, _("plan_1")),
-        (PLAN_2, _("plan_2")),
-        (PLAN_3, _("plan_3")),
     ]
 
     organization = models.OneToOneField(
@@ -1340,25 +1340,47 @@ class BillingPlan(models.Model):
 
     @property
     def plan_limit(self):
-        if self.plan == self.PLAN_1:
-            return settings.PLAN_1_LIMIT
-        elif self.plan == self.PLAN_2:
-            return settings.PLAN_2_LIMIT
-        elif self.plan == self.plan_3:
-            return settings.PLAN_3_LIMIT
+        if self.plan == self.PLAN_BASIC:
+            return settings.PLAN_BASIC
+        elif self.plan == self.PLAN_PLUS:
+            return settings.PLAN_PLUS
+        elif self.plan == self.PLAN_PREMIUM:
+            return settings.PLAN_PREMIUM
+        elif self.plan == self.PLAN_ENTERPRISE:
+            return settings.PLAN_ENTERPRISE
         return ''
 
     @property
-    def plan_1_limit(self):
-        return settings.PLAN_1_LIMIT
+    def plan_basic_info(self):
+        info = {
+            "limit": settings.PLAN_BASIC_LIMIT,
+            "price": settings.PLAN_BASIC_PRICE
+        }
+        return info
 
     @property
-    def plan_2_limit(self):
-        return settings.PLAN_2_LIMIT
+    def plan_plus_info(self):
+        info = {
+            "limit": settings.PLAN_PLUS_LIMIT,
+            "price": settings.PLAN_PLUS_PRICE
+        }
+        return info
 
     @property
-    def plan_3_limit(self):
-        return settings.PLAN_3_LIMIT
+    def plan_premium_info(self):
+        info = {
+            "limit": settings.PLAN_PREMIUM_LIMIT,
+            "price": settings.PLAN_PREMIUM_PRICE
+        }
+        return info
+
+    @property
+    def plan_enterprise_info(self):
+        info = {
+            "limit": settings.PLAN_ENTERPRISE_LIMIT,
+            "price": settings.PLAN_ENTERPRISE_PRICE
+        }
+        return info
 
 
 class Invoice(models.Model):

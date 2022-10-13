@@ -239,14 +239,15 @@ def check_organization_plans():
     after = now.start_of('month').strftime("%Y-%m-%d %H:%M")
     before = now.strftime("%Y-%m-%d %H:%M")
 
-    # query = (Q(organization_billing__plan=BillingPlan.PLAN_1) | Q(organization_billing__plan=BillingPlan.PLAN_2) | Q(organization_billing__plan=BillingPlan.PLAN_3)) & Q(is_suspended=False)
-
-    for organization in Organization.objects.filter(is_suspended=False).exclude(organization_billing__plan="free"):
+    for organization in Organization.objects.filter(is_suspended=False).exclude(organization_billing__plan="custom"):
         for project in organization.project.all():
             # update project contacts
-            contact_count = utils.count_contacts(
-                project_uuid=project, before=before, after=after
-            )
+            if settings.TESTING:
+                print
+            else:
+                contact_count = utils.count_contacts(
+                    project_uuid=project, before=before, after=after
+                )
             project.contact_count = int(contact_count)
             project.save(update_fields=["contact_count"])
 
