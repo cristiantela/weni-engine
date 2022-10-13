@@ -443,20 +443,6 @@ class BillingViewTestCase(TestCase):
         response, content_data = self.request_create_org(create_org_data, self.owner_token)
         self.assertEquals(content_data["organization"]["organization_billing"]["plan"], BillingPlan.PLAN_BASIC)
 
-    def test_plans(self):
-        print(BillingPlan.PLAN_FREE)
-        print(BillingPlan.PLAN_TRIAL)
-        print(BillingPlan.PLAN_BASIC)
-        print(BillingPlan.PLAN_PLUS)
-        print(BillingPlan.PLAN_PREMIUM)
-        print(BillingPlan.PLAN_ENTERPRISE)
-        print(BillingPlan.PLAN_CUSTOM)
-        bp = BillingPlan()
-        print(bp.plan_basic_info)
-        print(bp.plan_plus_info)
-        print(bp.plan_premium_info)
-        print(bp.plan_enterprise_info)
-
 
 class TaskTestCase(TestCase):
     def setUp(self):
