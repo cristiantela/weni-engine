@@ -17,7 +17,8 @@ from connect.common.models import (
     Project,
     ProjectAuthorization,
     RequestPermissionOrganization,
-    BillingPlan
+    BillingPlan,
+    Invoice
 )
 from rest_framework import status
 from freezegun import freeze_time
@@ -58,6 +59,7 @@ class CreateOrganizationAPITestCase(TestCase):
                 "name": "name",
                 "description": "desc",
                 "plan": "plan",
+                "customer": "cus_MYOrndkgpPHGK9",
                 "authorizations": [
                     {
                         "user_email": "e@mail.com",
@@ -82,6 +84,7 @@ class CreateOrganizationAPITestCase(TestCase):
                 "name": "name",
                 "description": "desc",
                 "plan": "plan",
+                "customer": "cus_MYOrndkgpPHGK9",
                 "authorizations": [
                     {
                         "user_email": "e@mail.com",
@@ -118,6 +121,7 @@ class CreateOrganizationAPITestCase(TestCase):
                 "name": "name",
                 "description": "trial",
                 "plan": "trial",
+                "customer": "cus_MYOrndkgpPHGK9",
                 "authorizations": [
                     {
                         "user_email": "e@mail.com",
@@ -134,6 +138,10 @@ class CreateOrganizationAPITestCase(TestCase):
         }
         response, content_data = self.request(data, self.owner_token)
         self.assertEquals(response.status_code, 201)
+
+    def tearDown(self):
+        Organization.objects.all().delete()
+        Invoice.objects.all().delete()
 
 
 class RetrieveOrganizationProjectsAPITestCase(TestCase):
@@ -193,6 +201,10 @@ class RetrieveOrganizationProjectsAPITestCase(TestCase):
 
     def test_is_template_project(self):
         response, content_data = self.request2(self.project.uuid, self.owner_token)
+
+    def tearDown(self):
+        Organization.objects.all().delete()
+        Invoice.objects.all().delete()
 
 
 class PlanAPITestCase(TestCase):
@@ -358,6 +370,10 @@ class PlanAPITestCase(TestCase):
         self.assertEquals(content_data["message"], "Empty customer")
         self.assertEquals(response.status_code, status.HTTP_304_NOT_MODIFIED)
 
+    def tearDown(self):
+        Organization.objects.all().delete()
+        Invoice.objects.all().delete()
+
 
 class BillingViewTestCase(TestCase):
 
@@ -415,6 +431,7 @@ class BillingViewTestCase(TestCase):
             "customer": "cus_MYOrndkgpPHGK9",
         }
         response, content_data = self.request(data=data, method="setup_plan")
+        customer = content_data["customer"]
         self.assertEquals(content_data["status"], "SUCCESS")
         # create organization after success at stripe
         User.objects.create(
@@ -426,6 +443,7 @@ class BillingViewTestCase(TestCase):
                 "name": "basic",
                 "description": "basic",
                 "plan": "basic",
+                "customer": customer,
                 "authorizations": [
                     {
                         "user_email": "e@mail.com",
@@ -442,6 +460,13 @@ class BillingViewTestCase(TestCase):
         }
         response, content_data = self.request_create_org(create_org_data, self.owner_token)
         self.assertEquals(content_data["organization"]["organization_billing"]["plan"], BillingPlan.PLAN_BASIC)
+        organization = Organization.objects.get(uuid=content_data["organization"]["uuid"])
+        self.assertEquals(organization.organization_billing_invoice.first().payment_status, Invoice.PAYMENT_STATUS_PAID)
+        self.assertEquals(organization.organization_billing_invoice.first().stripe_charge, "ch_teste")
+
+    def tearDown(self):
+        Organization.objects.all().delete()
+        Invoice.objects.all().delete()
 
 
 class TaskTestCase(TestCase):
@@ -474,3 +499,7 @@ class TaskTestCase(TestCase):
             organization_billing__cycle=BillingPlan.BILLING_CYCLE_MONTHLY,
             organization_billing__plan=BillingPlan.PLAN_ENTERPRISE,
         )
+
+    def tearDown(self):
+        Organization.objects.all().delete()
+        Invoice.objects.all().delete()

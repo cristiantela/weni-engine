@@ -4,7 +4,7 @@ from django.conf import settings
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.utils import timezone
-
+import pendulum
 from connect.authentication.models import User
 from connect.common.models import (
     Project,
@@ -21,9 +21,12 @@ from connect.common.models import (
     RocketAuthorization,
     RequestRocketPermission,
     OpenedProject,
+    BillingPlan,
+    Invoice,
 )
 from connect.celery import app as celery_app
 from connect.api.v1.internal.intelligence.intelligence_rest_client import IntelligenceRESTClient
+import stripe
 
 logger = logging.getLogger("connect.common.signals")
 
@@ -250,3 +253,29 @@ def request_rocket_permission(sender, instance, created, **kwargs):
                 project_auth.save(update_fields=["rocket_authorization"])
                 project_auth.rocket_authorization.update_rocket_permission()
             instance.delete()
+
+
+@receiver(post_save, sender=BillingPlan)
+def create_setup_plan_invoice(sender, instance, created, **kwargs):
+    if created:
+        stripe.api_key = settings.BILLING_SETTINGS.get("stripe", {}).get("API_KEY")
+        customer = instance.stripe_customer
+        if settings.TESTING:
+            charges = {
+                "data": [
+                    {
+                        "id": "ch_teste",
+                    }
+                ]
+            }
+        else:
+            charges = stripe.PaymentIntent.list(customer=customer)
+        Invoice.objects.create(
+            organization=instance.organization,
+            stripe_charge=charges["data"][0]["id"],
+            notes="Plan setup",
+            paid_date=pendulum.now(),
+            due_date=pendulum.now(),
+            payment_status=Invoice.PAYMENT_STATUS_PAID,
+            payment_method='credit_card'
+        )

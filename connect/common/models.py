@@ -65,6 +65,7 @@ class OrganizationManager(models.Manager):
         organization_billing__cycle,
         organization_billing__plan,
         organization_billing__payment_method=None,
+        organization_billing__stripe_customer=None,
         *args,
         **kwargs,
     ):
@@ -98,6 +99,8 @@ class OrganizationManager(models.Manager):
             new_kwargs.update({"payment_method": organization_billing__payment_method})
         if organization_billing__plan:
             new_kwargs.update({"plan": organization_billing__plan})
+        if organization_billing__stripe_customer:
+            new_kwargs.update({"stripe_customer": organization_billing__stripe_customer})
 
         BillingPlan.objects.create(organization=instance, **new_kwargs)
         return instance
