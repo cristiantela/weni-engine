@@ -56,7 +56,7 @@ class MyUserProfileViewSet(
 
         return user
 
-    def _get_photo_url(self, user: User) -> str:
+    def _get_photo_url(self, user: User) -> str:  # pragma: no cover
         photo = user.photo
         domain = f"https://{settings.AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/"
         endpoint = photo.storage.location + photo.name
@@ -182,7 +182,12 @@ class MyUserProfileViewSet(
             keycloak_instance = KeycloakControl()
             user.has_2fa = activate_2fa
             user.save()
-            response = keycloak_instance.configure_2fa(user.email, activate_2fa)
+            if settings.TESTING:
+                response = {}
+                if request.data.get("testing_fail"):
+                    response = 'User not found'
+            else:
+                response = keycloak_instance.configure_2fa(user.email, activate_2fa)  # pragma: no cover
             if response == {}:
                 OrganizationAuthorization.set_2fa(user)
                 return Response(status=status.HTTP_200_OK, data={"email": user.email})

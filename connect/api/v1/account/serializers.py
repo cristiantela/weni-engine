@@ -58,20 +58,20 @@ class UserSerializer(serializers.ModelSerializer):
             instance.send_request_flow_user_info()
 
         if "first_name" in validated_data or "last_name" in validated_data:
+            if not settings.TESTING:  # pragma: no cover
+                integrations_client = IntegrationsRESTClient()
+                chats_client = ChatsRESTClient()
 
-            integrations_client = IntegrationsRESTClient()
-            chats_client = ChatsRESTClient()
-
-            integrations_client.update_user(
-                user_email=update_instance.email,
-                first_name=update_instance.first_name,
-                last_name=update_instance.last_name
-            )
-            chats_client.update_user(
-                user_email=update_instance.email,
-                first_name=update_instance.first_name,
-                last_name=update_instance.last_name
-            )
+                integrations_client.update_user(
+                    user_email=update_instance.email,
+                    first_name=update_instance.first_name,
+                    last_name=update_instance.last_name
+                )
+                chats_client.update_user(
+                    user_email=update_instance.email,
+                    first_name=update_instance.first_name,
+                    last_name=update_instance.last_name
+                )
 
         return update_instance
 

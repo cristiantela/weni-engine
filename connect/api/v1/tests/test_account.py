@@ -126,3 +126,56 @@ class AdditionalUserInfoTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(company_info, company_response)
         self.assertEqual(user_info.get('phone'), user_response.get('phone'))
+
+    def test_fail(self):
+        company_info = {
+            "name": "test",
+            "number_people": "0",
+            "segment": "test",
+            "sector": "ti",
+            "weni_helps": "ti.incidentes"
+        }
+        body = dict(
+            company=company_info,
+        )
+        response, content_data = self.request(body, self.user_token)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class TwoFacAuthTestCase(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.user, self.user_token = create_user_and_token()
+
+    def request(self, data, token):
+        authorization_header = {"HTTP_AUTHORIZATION": "Token {}".format(token.key)}
+        request = self.factory.patch(
+            "/v1/account/my-profile/two_factor_authentication/",
+            data=json.dumps(data),
+            content_type="application/json",
+            format="json",
+            **authorization_header,
+        )
+        response = MyUserProfileViewSet.as_view({"patch": "set_two_factor_authentication"})(
+            request,
+        )
+        response.render()
+        content_data = json.loads(response.content)
+        return (response, content_data)
+
+    def test_2fa(self):
+        data = {
+            "2FA": True
+        }
+        response, content_data = self.request(data, self.user_token)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(content_data, {'email': 'fake@user.com'})
+
+    def test_2fa_user_not_found(self):
+        data = {
+            "2FA": True,
+            "testing_fail": True
+        }
+        response, content_data = self.request(data, self.user_token)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(content_data, {'response': 'User not found'})
