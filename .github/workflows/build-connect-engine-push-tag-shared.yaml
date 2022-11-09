@@ -1,4 +1,4 @@
-name: Build Weni Engine (Connect) in Shared (Push Tag)
+  name: Build Weni Engine (Connect) in Dockerhub (Push Tag)
 
 on:
   push:
