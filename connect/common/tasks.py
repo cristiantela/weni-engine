@@ -96,8 +96,11 @@ def update_user_permission_organization(
     retry_backoff=True,
 )
 def update_project(organization_uuid: str, organization_name: str):
-    grpc_instance = utils.get_grpc_types().get("flow")
-    grpc_instance.update_project(
+    if settings.USE_FLOW_REST:
+        flow_instance = FlowsRESTClient()
+    else:
+        flow_instance = utils.get_grpc_types().get("flow")
+    flow_instance.update_project(
         organization_uuid=organization_uuid,
         organization_name=organization_name,
     )
@@ -106,8 +109,11 @@ def update_project(organization_uuid: str, organization_name: str):
 
 @app.task(name="delete_project")
 def delete_project(inteligence_organization: int, user_email):
-    grpc_instance = utils.get_grpc_types().get("flow")
-    grpc_instance.delete_project(
+    if settings.USE_FLOW_REST:
+        flow_instance = FlowsRESTClient()
+    else:
+        flow_instance = utils.get_grpc_types().get("flow")
+    flow_instance.delete_project(
         project_uuid=inteligence_organization,
         user_email=user_email,
     )
@@ -123,7 +129,10 @@ def delete_project(inteligence_organization: int, user_email):
 def update_user_permission_project(
     flow_organization: str, project_uuid: str, user_email: str, permission: int
 ):
-    flow_instance = utils.get_grpc_types().get("flow")
+    if settings.USE_FLOW_REST:
+        flow_instance = FlowsRESTClient()
+    else:
+        flow_instance = utils.get_grpc_types().get("flow")
 
     integrations_client = IntegrationsRESTClient()
 
@@ -174,11 +183,14 @@ def create_organization(organization_name: str, user_email: str):
 
 @app.task(name="get_contacts_detailed")
 def get_contacts_detailed(project_uuid: str, before: str, after: str):
-    grpc_instance = utils.get_grpc_types().get("flow")
+    if settings.USE_FLOW_REST:
+        flow_instance = FlowsRESTClient()
+    else:
+        flow_instance = utils.get_grpc_types().get("flow")
     project = Project.objects.get(uuid=project_uuid)
     response = []
     try:
-        contacts = grpc_instance.get_active_contacts(
+        contacts = flow_instance.get_active_contacts(
             str(project.flow_organization), before, after
         )
         active_contacts_info = []
@@ -199,14 +211,17 @@ def get_contacts_detailed(project_uuid: str, before: str, after: str):
 
 @app.task(name="create_project")
 def create_project(project_name: str, user_email: str, project_timezone: str):
-    grpc_instance = utils.get_grpc_types().get("flow")
+    if settings.USE_FLOW_REST:
+        flow_instance = FlowsRESTClient()
+    else:
+        flow_instance = utils.get_grpc_types().get("flow")
 
-    project = grpc_instance.create_project(
+    project = flow_instance.create_project(
         project_name=project_name,
         user_email=user_email,
         project_timezone=project_timezone,
     )
-    return {"id": project.id, "uuid": project.uuid}
+    return {"id": project.get("id"), "uuid": project.get("uuid")}
 
 
 @app.task(name="create_template_project")
@@ -231,7 +246,11 @@ def create_template_project(project_name: str, user_email: str, project_timezone
     retry_backoff=True,
 )
 def update_user_language(user_email: str, language: str):
-    utils.get_grpc_types().get("flow").update_language(
+    if settings.USE_FLOW_REST:
+        flow_instance = FlowsRESTClient()
+    else:
+        flow_instance = utils.get_grpc_types().get("flow")
+    flow_instance.update_language(
         user_email=user_email,
         language=language,
     )
@@ -244,14 +263,15 @@ def update_user_language(user_email: str, language: str):
 
 @app.task(name="search_project")
 def search_project(organization_id: int, project_uuid: str, text: str):
-    flow_result = (
-        utils.get_grpc_types()
-        .get("flow")
-        .get_project_flows(
-            project_uuid=project_uuid,
-            flow_name=text,
-        )
+    if not settings.USE_FLOW_REST:
+        flows_client = utils.get_grpc_types().get("flow")
+    else:
+        flows_client = FlowsRESTClient()
+    flow_result = flows_client.get_project_flows(
+        project_uuid=project_uuid,
+        flow_name=text
     )
+
     inteligence_result = (
         IntelligenceRESTClient().get_organization_intelligences(
             intelligence_name=text,
@@ -267,7 +287,11 @@ def search_project(organization_id: int, project_uuid: str, text: str):
 @app.task()
 def check_organization_free_plan():
     limits = GenericBillingData.get_generic_billing_data_instance()
-    flow_instance = utils.get_grpc_types().get("flow")
+    if settings.USE_FLOW_REST:
+        flow_instance = FlowsRESTClient()
+    else:
+        flow_instance = utils.get_grpc_types().get("flow")
+
     for organization in Organization.objects.filter(
         organization_billing__plan="free", is_suspended=False
     ):
@@ -315,7 +339,11 @@ def sync_active_contacts():
 
 @app.task()
 def sync_total_contact_count():
-    flow_instance = utils.get_grpc_types().get("flow")
+    if settings.USE_FLOW_REST:
+        flow_instance = FlowsRESTClient()
+    else:
+        flow_instance = utils.get_grpc_types().get("flow")
+
     for project in Project.objects.all():
         response = flow_instance.get_project_statistic(project_uuid=str(project.flow_organization))
         contacts = response.get("active_contacts", project.total_contact_count)
@@ -326,7 +354,10 @@ def sync_total_contact_count():
 
 @app.task()
 def sync_project_information():
-    flow_instance = utils.get_grpc_types().get("flow")
+    if settings.USE_FLOW_REST:
+        flow_instance = FlowsRESTClient()
+    else:
+        flow_instance = utils.get_grpc_types().get("flow")
     for project in Project.objects.all():
         flow_result = flow_instance.get_project_info(
             project_uuid=str(project.flow_organization)
@@ -341,7 +372,10 @@ def sync_project_information():
 
 @app.task(name="sync_project_statistics")
 def sync_project_statistics():
-    flow_instance = utils.get_grpc_types().get("flow")
+    if settings.USE_FLOW_REST:
+        flow_instance = FlowsRESTClient()
+    else:
+        flow_instance = utils.get_grpc_types().get("flow")
     for project in Project.objects.all():
         statistic_project_result = flow_instance.get_project_statistic(
             project_uuid=str(project.flow_organization),
@@ -354,23 +388,29 @@ def sync_project_statistics():
 
 @app.task()
 def sync_repositories_statistics():
-    flow_instance = utils.get_grpc_types().get("flow")
+    if settings.USE_FLOW_REST:
+        flow_instance = FlowsRESTClient()
+    else:
+        flow_instance = utils.get_grpc_types().get("flow")
+
     ai_client = IntelligenceRESTClient()
 
     for project in Project.objects.all():
-        classifiers_project = flow_instance.get_classifiers(
-            project_uuid=str(project.flow_organization),
-            classifier_type="bothub",
-            is_active=True,
-        )
-        try:
-            intelligence_count = int(
-                ai_client.get_count_intelligences_project(
-                    classifiers=classifiers_project,
-                ).get("repositories_count")
+        intelligence_count = 0
+        if not settings.TESTING:
+            classifiers_project = flow_instance.get_classifiers(
+                project_uuid=str(project.flow_organization),
+                classifier_type="bothub",
+                is_active=True,
             )
-        except Exception:
-            intelligence_count = 0
+            try:
+                intelligence_count = int(
+                    ai_client.get_count_intelligences_project(
+                        classifiers=classifiers_project,
+                    ).get("repositories_count")
+                )
+            except Exception:
+                intelligence_count = 0
 
         project.inteligence_count = intelligence_count
         project.save(update_fields=["inteligence_count"])
@@ -378,7 +418,10 @@ def sync_repositories_statistics():
 
 @app.task(name="sync_channels_statistics")
 def sync_channels_statistics():
-    flow_instance = utils.get_grpc_types().get("flow")
+    if settings.USE_FLOW_REST:
+        flow_instance = FlowsRESTClient()
+    else:
+        flow_instance = utils.get_grpc_types().get("flow")
     for project in Project.objects.all():
         project.extra_active_integration = len(
             list(
@@ -487,7 +530,11 @@ def delete_status_logs():
     retry_backoff=True,
 )
 def update_suspend_project(project_uuid: str, is_suspended: bool):
-    utils.get_grpc_types().get("flow").suspend_or_unsuspend_project(
+    if settings.USE_FLOW_REST:
+        flow_instance = FlowsRESTClient()
+    else:
+        flow_instance = utils.get_grpc_types().get("flow")
+    flow_instance.suspend_or_unsuspend_project(
         project_uuid=project_uuid,
         is_suspended=is_suspended,
     )
@@ -539,9 +586,12 @@ def update_user_name(user_email: str, first_name: str, last_name: str):
 
 @app.task(name="get_billing_total_statistics")
 def get_billing_total_statistics(project_uuid: str, before: str, after: str):
-    grpc_instance = utils.get_grpc_types().get("flow")
+    if settings.USE_FLOW_REST:
+        flow_instance = FlowsRESTClient()
+    else:
+        flow_instance = utils.get_grpc_types().get("flow")
 
-    contact_count = grpc_instance.get_billing_total_statistics(
+    contact_count = flow_instance.get_billing_total_statistics(
         project_uuid=str(project_uuid),
         before=before,
         after=after,
@@ -557,7 +607,11 @@ def get_billing_total_statistics(project_uuid: str, before: str, after: str):
     retry_backoff=True,
 )
 def delete_user_permission_project(project_uuid: str, user_email: str, permission: int):
-    utils.get_grpc_types().get("flow").delete_user_permission_project(
+    if settings.USE_FLOW_REST:
+        flow_instance = FlowsRESTClient()
+    else:
+        flow_instance = utils.get_grpc_types().get("flow")
+    flow_instance.delete_user_permission_project(
         project_uuid=project_uuid,
         user_email=user_email,
         permission=permission
@@ -566,30 +620,47 @@ def delete_user_permission_project(project_uuid: str, user_email: str, permissio
 
 @app.task(name="list_channels")
 def list_channels(channel_type):
-    grpc_instance = utils.get_grpc_types().get("flow")
-    response = list(grpc_instance.list_channel(channel_type=channel_type))
+    if settings.USE_FLOW_REST:
+        flow_instance = FlowsRESTClient()
+        response = flow_instance.list_channel(channel_type=channel_type)
+    else:
+        flow_instance = utils.get_grpc_types().get("flow")
+        response = list(flow_instance.list_channel(channel_type=channel_type))
     channels = []
     for channel in response:
-        project = Project.objects.filter(flow_organization=channel.org)
+        org = channel.get("org") if settings.USE_FLOW_REST else channel.org
+        project = Project.objects.filter(flow_organization=org)
         if project:
             project = project.first()
-            channels.append(
-                {
-                    "uuid": str(channel.uuid),
-                    "name": channel.name,
-                    "config": channel.config,
-                    "address": channel.address,
-                    "project_uuid": str(project.uuid),
-                    "is_active": channel.is_active,
-                }
-            )
+            if settings.USE_FLOW_REST:
+                channel_data = dict(
+                    uuid=str(channel.get("uuid")),
+                    name=channel.get("name"),
+                    config=channel.get("config"),
+                    address=channel.get("address"),
+                    project_uuid=str(project.uuid),
+                    is_active=channel.get("is_active")
+                )
+            else:
+                channel_data = dict(
+                    uuid=str(channel.uuid),
+                    name=channel.name,
+                    config=channel.config,
+                    address=channel.address,
+                    project_uuid=str(project.uuid),
+                    is_active=channel.is_active,
+                )
+            channels.append(channel_data)
     return channels
 
 
 @app.task(name='release_channel')
 def realease_channel(channel_uuid, user):
-    grpc_instance = utils.get_grpc_types().get("flow")
-    grpc_instance.release_channel(
+    if settings.USE_FLOW_REST:
+        flow_instance = FlowsRESTClient()
+    else:
+        flow_instance = utils.get_grpc_types().get("flow")
+    flow_instance.release_channel(
         channel_uuid=channel_uuid,
         user=user,
     )
@@ -598,10 +669,19 @@ def realease_channel(channel_uuid, user):
 
 @app.task(name='create_channel')
 def create_channel(user, project_uuid, data, channeltype_code):
-    grpc_instance = utils.get_grpc_types().get("flow")
+    if settings.USE_FLOW_REST:
+        flow_instance = FlowsRESTClient()
+        return flow_instance.create_channel(
+            user=user,
+            project_uuid=project_uuid,
+            data=data,
+            channeltype_code=channeltype_code
+        )
+    else:
+        flow_instance = utils.get_grpc_types().get("flow")
 
     try:
-        response = grpc_instance.create_channel(
+        response = flow_instance.create_channel(
             user=user,
             project_uuid=project_uuid,
             data=data,
@@ -619,9 +699,18 @@ def create_channel(user, project_uuid, data, channeltype_code):
 
 @app.task(name="create_wac_channel")
 def create_wac_channel(user, flow_organization, config, phone_number_id):
-    grpc_instance = utils.get_grpc_types().get("flow")
+    if settings.USE_FLOW_REST:
+        flow_instance = FlowsRESTClient()
+        return flow_instance.create_wac_channel(
+            user=user,
+            flow_organization=str(flow_organization),
+            config=config,
+            phone_number_id=phone_number_id,
+        )
+    else:
+        flow_instance = utils.get_grpc_types().get("flow")
     try:
-        response = grpc_instance.create_wac_channel(
+        response = flow_instance.create_wac_channel(
             user=user,
             flow_organization=str(flow_organization),
             config=config,
@@ -639,8 +728,11 @@ def create_wac_channel(user, flow_organization, config, phone_number_id):
 
 @app.task(name="retrieve_classifier")
 def retrieve_classifier(classifier_uuid: str):
-    grpc_instance = utils.get_grpc_types().get("flow")
-    response = grpc_instance.get_classifier(
+    if settings.USE_FLOW_REST:
+        flow_instance = FlowsRESTClient()
+    else:
+        flow_instance = utils.get_grpc_types().get("flow")
+    response = flow_instance.get_classifier(
         classifier_uuid=str(classifier_uuid),
     )
     return dict(
@@ -654,8 +746,11 @@ def retrieve_classifier(classifier_uuid: str):
 
 @app.task(name="destroy_classifier")
 def destroy_classifier(classifier_uuid: str, user_email: str):
-    grpc_instance = utils.get_grpc_types().get("flow")
-    grpc_instance.delete_classifier(
+    if settings.USE_FLOW_REST:
+        flow_instance = FlowsRESTClient()
+    else:
+        flow_instance = utils.get_grpc_types().get("flow")
+    flow_instance.delete_classifier(
         classifier_uuid=str(classifier_uuid),
         user_email=str(user_email),
     )
@@ -664,36 +759,36 @@ def destroy_classifier(classifier_uuid: str, user_email: str):
 
 @app.task(name="create_classifier")
 def create_classifier(project_uuid: str, user_email: str, classifier_name: str, access_token):
-    grpc_instance = utils.get_grpc_types().get("flow")
-    response = grpc_instance.create_classifier(
+    if settings.USE_FLOW_REST:
+        flow_instance = FlowsRESTClient()
+    else:
+        flow_instance = utils.get_grpc_types().get("flow")
+    response = flow_instance.create_classifier(
         project_uuid=project_uuid,
         user_email=user_email,
         classifier_type="bothub",
         classifier_name=classifier_name,
         access_token=access_token,
     )
-    return dict(
-        authorization_uuid=response.access_token,
-        classifier_type=response.classifier_type,
-        name=response.name,
-        is_active=response.is_active,
-        uuid=response.uuid,
-    )
+    return response.get("data", {})
 
 
 @app.task(name='list_classifier')
 def list_classifier(project_uuid: str):
-    grpc_instance = utils.get_grpc_types().get("flow")
-    response = grpc_instance.get_classifiers(
+    classifiers = {"data": []}
+    if settings.USE_FLOW_REST:
+        flow_instance = FlowsRESTClient()
+    else:
+        flow_instance = utils.get_grpc_types().get("flow")
+    response = flow_instance.get_classifiers(
         project_uuid=str(project_uuid),
         classifier_type="bothub",
         is_active=True,
     )
-
-    classifiers = {"data": []}
     for i in response:
+        authorization = i.get("access_token") if settings.USE_FLOW_REST else i.get("authorization_uuid")
         classifiers["data"].append({
-            "authorization_uuid": i.get("authorization_uuid"),
+            "authorization_uuid": authorization,
             "classifier_type": i.get("classifier_type"),
             "name": i.get("name"),
             "is_active": i.get("is_active"),

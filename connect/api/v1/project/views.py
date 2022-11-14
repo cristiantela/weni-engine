@@ -1,4 +1,3 @@
-import json
 import uuid
 from django.shortcuts import get_object_or_404
 from django.utils.translation import ugettext_lazy as _
@@ -289,7 +288,7 @@ class ProjectViewSet(
             task = tasks.create_channel.delay(
                 user=serializer.validated_data.get("user"),
                 project_uuid=str(project.flow_organization),
-                data=json.dumps(serializer.validated_data.get("data")),
+                data=serializer.validated_data.get("data"),
                 channeltype_code=serializer.validated_data.get("channeltype_code"),
             )
             task.wait()
